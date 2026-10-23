@@ -138,6 +138,8 @@ def run_drift_detection(config_path: str = "config/monitoring_config.yaml") -> d
     ref_path = config["reference_data_path"]
     print(f"\n[DriftDetector] Loading Baseline Reference from: {ref_path}")
     df_ref = pd.read_parquet(ref_path)[features].copy()
+    if len(df_ref) > 10000:
+        df_ref = df_ref.sample(10000, random_state=42)
 
     # 2. Load & Score Current Production Batch
     curr_path = config["current_data_path"]

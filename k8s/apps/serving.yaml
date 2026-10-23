@@ -66,6 +66,9 @@ spec:
   ports:
     - port: 8085 # External 8085 -> container 8000 (PORT_PLAN.md)
       targetPort: 8000
-      name: http
+      name: http-ext
+    - port: 8000 # Internal cluster port 8000 -> container 8000
+      targetPort: 8000
+      name: http-int
   selector:
     app: nyc-taxi-serving
