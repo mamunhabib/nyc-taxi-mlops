@@ -213,7 +213,7 @@ if predict_clicked:
 
             if resp.status_code == 200:
                 result = resp.json()
-                duration = result["predicted_duration_minutes"]
+                duration = result.get("trip_duration", result.get("predicted_duration_minutes", 0.0))
                 model_used = result.get("model_version", "champion")
 
                 # Realistic NYC Taxi Fare estimate ($3 base + $1.75/mi + $0.50/min)
