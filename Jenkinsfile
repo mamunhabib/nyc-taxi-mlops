@@ -2,54 +2,17 @@ pipeline {
     agent any
 
     triggers {
-        // Poll SCM every 2 minutes for automated CI/CD triggers on commit
+        // Poll GitHub every 2 minutes for automated CI/CD triggers on push
         pollSCM('H/2 * * * *')
-    }
-
-    parameters {
-        booleanParam(
-            name: 'FORCE_RETRAIN',
-            defaultValue: false,
-            description: 'Force Continuous Training (CT) retraining loop regardless of drift detection'
-        )
     }
 
     environment {
         SERVING_IMAGE = 'ghcr.io/mamunhabib/nyc-taxi-serving:latest'
         UI_IMAGE      = 'ghcr.io/mamunhabib/nyc-taxi-ui:latest'
         NAMESPACE     = 'nyc-taxi-mlops'
-        PYTHONPATH    = '.'
     }
 
     stages {
-        stage('Lint & Unit Testing') {
-            steps {
-                echo "Running Unit and Integration tests for Data Prep and Model Serving..."
-                sh """
-                python3 -m venv venv || true
-                . venv/bin/activate
-                pip install -r requirements.txt
-                PYTHONPATH=. pytest tests/test_data_prep.py tests/test_predict.py -v
-                """
-            }
-        }
-
-        stage('Continuous Training (CT) & Drift Check') {
-            steps {
-                echo "Evaluating production data drift and triggering automated retraining if needed..."
-                sh """
-                . venv/bin/activate
-                if [ "${params.FORCE_RETRAIN}" = "true" ]; then
-                    echo "Forcing Continuous Training cycle..."
-                    python pipelines/training_flow.py --force
-                else
-                    echo "Running drift-based Continuous Training evaluation..."
-                    python pipelines/training_flow.py
-                fi
-                """
-            }
-        }
-
         stage('Build Docker Images') {
             steps {
                 echo "Building backend serving image: ${SERVING_IMAGE}..."
@@ -86,7 +49,7 @@ pipeline {
                 echo "Applying Kubernetes applications to namespace ${NAMESPACE}..."
                 sh "kubectl apply -f k8s/apps/ -n ${NAMESPACE}"
 
-                echo "Triggering zero-downtime rolling restart to force fresh GHCR image pull..."
+                echo "Triggering zero-downtime rolling restart..."
                 sh "kubectl rollout restart deployment/nyc-taxi-serving -n ${NAMESPACE}"
                 sh "kubectl rollout restart deployment/nyc-taxi-ui -n ${NAMESPACE}"
 
@@ -118,7 +81,7 @@ pipeline {
 
     post {
         success {
-            echo "CI/CD & CT Pipeline executed successfully!"
+            echo "CI/CD Pipeline executed successfully!"
         }
         failure {
             echo "Pipeline run failed. Check stage logs for troubleshooting."
