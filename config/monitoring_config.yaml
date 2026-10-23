@@ -1,0 +1,31 @@
+monitoring:
+  project_name: "NYC Taxi Trip Duration Monitoring"
+  reference_data_path: "data/reference.parquet"
+  current_data_path: "data/raw/green_tripdata_2023-03.parquet"
+  
+  thresholds:
+    drift_share_threshold: 0.30       # Trigger retraining when > 30% of features drift
+    p_value: 0.05                     # Significance level for statistical drift tests
+    mape_threshold: 0.35              # Mean Absolute Percentage Error alert tolerance
+
+  features:
+    numerical:
+      - "trip_distance"
+      - "duration"
+      - "prediction"
+    categorical:
+      - "PULocationID"
+      - "DOLocationID"
+      - "PU_DO"
+
+  evidently_ui:
+    url: "http://localhost:8086"
+    html_report_path: "reports/drift_report.html"
+
+  database:
+    host: "localhost"
+    port: 5432
+    name: "mlflow"
+    user: "postgres"
+    password: "postgres"
+    table_name: "drift_metrics"

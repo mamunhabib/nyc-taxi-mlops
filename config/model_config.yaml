@@ -1,0 +1,45 @@
+# NYC Taxi Trip Duration — Model Configuration
+
+experiment:
+  name: "nyc-taxi-experiment"
+  tracking_uri: "http://localhost:5000"
+  model_registry_name: "nyc-taxi-duration-model"
+  champion_alias: "champion"
+
+data:
+  processed_dir: "data/processed"
+  models_dir: "models"
+  reference_parquet_path: "data/reference.parquet"
+
+models:
+  # Candidate 1: Ridge Regression (Fast Linear Baseline)
+  ridge:
+    enabled: true
+    params:
+      alpha: 1.0
+      solver: "auto"
+      random_state: 42
+
+  # Candidate 2: Random Forest Regressor (Bagging Ensemble)
+  random_forest:
+    enabled: true
+    params:
+      n_estimators: 50
+      max_depth: 10
+      min_samples_split: 5
+      min_samples_leaf: 2
+      n_jobs: -1
+      random_state: 42
+
+  # Candidate 3: XGBoost Regressor (Gradient Boosting)
+  xgboost:
+    enabled: true
+    params:
+      n_estimators: 60
+      max_depth: 6
+      learning_rate: 0.1
+      subsample: 0.8
+      colsample_bytree: 0.8
+      objective: "reg:squarederror"
+      random_state: 42
+      n_jobs: -1

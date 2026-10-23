@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nyc-taxi-serving
+  namespace: nyc-taxi-mlops
+  labels:
+    app: nyc-taxi-serving
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nyc-taxi-serving
+  template:
+    metadata:
+      labels:
+        app: nyc-taxi-serving
+    spec:
+      imagePullSecrets:
+        - name: git-secret
+      containers:
+        - name: serving
+          image: ghcr.io/mamunhabib/nyc-taxi-serving:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: platform-config
+          env:
+            - name: MODEL_NAME
+              value: "nyc-taxi-duration-model"
+            - name: MODEL_ALIAS
+              value: "champion"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nyc-taxi-serving
+  namespace: nyc-taxi-mlops
+  labels:
+    app: nyc-taxi-serving
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8085 # External 8085 -> container 8000 (PORT_PLAN.md)
+      targetPort: 8000
+      name: http
+  selector:
+    app: nyc-taxi-serving

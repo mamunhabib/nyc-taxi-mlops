@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: evidently-pvc
+  namespace: nyc-taxi-mlops
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evidently-ui
+  namespace: nyc-taxi-mlops
+  labels:
+    app: evidently-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evidently-ui
+  template:
+    metadata:
+      labels:
+        app: evidently-ui
+    spec:
+      containers:
+        - name: evidently-ui
+          image: evidently/evidently-service:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - --port
+            - "8001"
+            - --workspace
+            - /workspace
+          ports:
+            - containerPort: 8001
+              name: http
+          volumeMounts:
+            - name: workspace-storage
+              mountPath: /workspace
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: workspace-storage
+          persistentVolumeClaim:
+            claimName: evidently-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evidently-ui
+  namespace: nyc-taxi-mlops
+  labels:
+    app: evidently-ui
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8086 # External 8086 -> container 8001 (PORT_PLAN.md)
+      targetPort: 8001
+      name: http
+  selector:
+    app: evidently-ui

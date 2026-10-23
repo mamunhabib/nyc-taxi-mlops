@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nyc-taxi-ui
+  namespace: nyc-taxi-mlops
+  labels:
+    app: nyc-taxi-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nyc-taxi-ui
+  template:
+    metadata:
+      labels:
+        app: nyc-taxi-ui
+    spec:
+      imagePullSecrets:
+        - name: git-secret
+      containers:
+        - name: ui
+          image: ghcr.io/mamunhabib/nyc-taxi-ui:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8501
+              name: http
+          env:
+            - name: SERVING_URL
+              value: "http://nyc-taxi-serving:8000"
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nyc-taxi-ui
+  namespace: nyc-taxi-mlops
+  labels:
+    app: nyc-taxi-ui
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8089 # External 8089 -> container 8501 (PORT_PLAN.md)
+      targetPort: 8501
+      name: http
+  selector:
+    app: nyc-taxi-ui
