@@ -202,11 +202,11 @@ with st.sidebar:
 
     st.divider()
     st.header("🔗 MLOps Platform Observability")
-    st.markdown("- [Kibana Telemetry & Logs (8084)](/kibana/)")
-    st.markdown("- [Evidently Drift Monitoring (8086)](/evidently/)")
-    st.markdown("- [MLflow Model Registry (8087)](/mlflow/)")
-    st.markdown("- [MinIO Object Storage (8088)](/minio/)")
-    st.markdown("- [FastAPI Swagger Docs (8085)](/docs)")
+    st.markdown("- [Kibana Telemetry & Logs (8084)](http://localhost:8084)")
+    st.markdown("- [Evidently Drift Monitoring (8086)](http://localhost:8086)")
+    st.markdown("- [MLflow Model Registry (8087)](http://localhost:8087)")
+    st.markdown("- [MinIO Object Storage (8088)](http://localhost:8088)")
+    st.markdown("- [FastAPI Swagger Docs (8085)](http://localhost:8085/docs)")
 
 
 # Form Inputs & Reactive State
