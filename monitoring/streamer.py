@@ -11,7 +11,8 @@ import requests
 def load_raw_stream_data(filepath: str = "data/raw/green_tripdata_2023-03.parquet") -> pd.DataFrame:
     """Load and perform baseline cleaning on live simulation data."""
     if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Simulation data file not found at: {filepath}")
+        from src.utils import ensure_raw_dataset
+        ensure_raw_dataset(filepath)
 
     df = pd.read_parquet(filepath)
 

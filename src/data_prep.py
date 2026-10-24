@@ -13,6 +13,10 @@ def dump_pickle(obj, filename: str):
 
 def read_dataframe(filename: str) -> pd.DataFrame:
     """Read raw taxi parquet file and apply baseline cleaning."""
+    if not os.path.exists(filename):
+        from src.utils import ensure_raw_dataset
+        ensure_raw_dataset(filename)
+
     df = pd.read_parquet(filename)
 
     # Detect Green (lpep) vs Yellow (tpep) timestamp columns

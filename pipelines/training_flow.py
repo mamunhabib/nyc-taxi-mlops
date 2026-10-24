@@ -35,6 +35,12 @@ def load_config(config_path: str = "config/monitoring_config.yaml") -> dict:
 
 def check_drift_status(config_path: str = "config/monitoring_config.yaml") -> bool:
     """Run drift detection and determine if retraining is recommended."""
+    mon_cfg = load_config(config_path)
+    ref_path = mon_cfg.get("reference_data_path", "data/reference.parquet")
+    if not os.path.exists(ref_path):
+        print(f"\n[CT Pipeline] Baseline reference '{ref_path}' not found on disk. Initial model training required.")
+        return True
+
     print("\n[CT Pipeline] Step 1: Checking Production Data Drift...")
     drift_results = run_drift_detection(config_path)
     retrain_recommended = drift_results.get("retraining_recommended", False)
@@ -55,7 +61,7 @@ def execute_continuous_training(
 
     mon_cfg = load_config(monitoring_config_path)
 
-    # 1. Update processed data using latest available batches
+    # 1. Ingest raw TLC batches (auto-download if absent)
     print("\n[CT Pipeline] Step 2: Ingesting latest production batches & re-processing...")
     train_raw = "data/raw/green_tripdata_2023-01.parquet"
     val_raw = "data/raw/green_tripdata_2023-02.parquet"
@@ -67,20 +73,32 @@ def execute_continuous_training(
     df_retrain_val = pd.concat([df_val, df_stream], ignore_index=True)
     print(f"[CT Pipeline] Combined Retraining Set: {len(df_retrain_val):,} rows")
 
-    # Vectorize and update data/processed/val.pkl with the fresh batch
+    # 2. Ensure DictVectorizer and base training split exist
     dv_path = "data/processed/dv.pkl"
-    with open(dv_path, "rb") as f_in:
-        dv = pickle.load(f_in)
-
-    # Ensure base training split exists
     train_processed_path = "data/processed/train.pkl"
-    if not os.path.exists(train_processed_path):
-        print(f"[CT Pipeline] Generating base training split '{train_processed_path}'...")
+    os.makedirs("data/processed", exist_ok=True)
+
+    if not os.path.exists(dv_path):
+        from sklearn.feature_extraction import DictVectorizer
+        print(f"[CT Pipeline] Fitting fresh DictVectorizer from '{train_raw}'...")
         df_train = read_dataframe(train_raw)
-        X_train, _ = preprocess(df_train, dv, fit_dv=False)
+        dv = DictVectorizer(sparse=True)
+        X_train, dv = preprocess(df_train, dv, fit_dv=True)
+        dump_pickle(dv, dv_path)
         y_train = df_train["duration"].values
         dump_pickle((X_train, y_train), train_processed_path)
-        print(f"[CT Pipeline] Saved base training split to '{train_processed_path}' (Shape: {X_train.shape})")
+        print(f"[CT Pipeline] Generated '{dv_path}' and base split '{train_processed_path}' (Shape: {X_train.shape})")
+    else:
+        with open(dv_path, "rb") as f_in:
+            dv = pickle.load(f_in)
+
+        if not os.path.exists(train_processed_path):
+            print(f"[CT Pipeline] Generating base training split '{train_processed_path}'...")
+            df_train = read_dataframe(train_raw)
+            X_train, _ = preprocess(df_train, dv, fit_dv=False)
+            y_train = df_train["duration"].values
+            dump_pickle((X_train, y_train), train_processed_path)
+            print(f"[CT Pipeline] Saved base training split to '{train_processed_path}' (Shape: {X_train.shape})")
 
     X_val, _ = preprocess(df_retrain_val, dv, fit_dv=False)
     y_val = df_retrain_val["duration"].values

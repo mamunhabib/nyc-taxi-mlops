@@ -52,7 +52,9 @@ pipeline {
                             python pipelines/training_flow.py
                         fi
                     '
+                mkdir -p models data/processed
                 docker cp nyc-taxi-ct-run:/app/models/model.pkl ./models/model.pkl || true
+                docker cp nyc-taxi-ct-run:/app/data/processed/dv.pkl ./data/processed/dv.pkl || true
                 docker cp nyc-taxi-ct-run:/app/data/processed/val.pkl ./data/processed/val.pkl || true
                 docker cp nyc-taxi-ct-run:/app/data/reference.parquet ./data/reference.parquet || true
                 docker rm -f nyc-taxi-ct-run || true

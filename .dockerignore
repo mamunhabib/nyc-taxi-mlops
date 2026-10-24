@@ -29,8 +29,10 @@ env/
 .venv/
 
 # ==============================================================================
-# Intermediate Training Splits & Reports
+# Raw Datasets & Intermediate Splits (Downloaded on Demand in Container)
 # ==============================================================================
+data/raw/
+data/processed/train.pkl
 data/processed/val.pkl
 data/processed/test.pkl
 reports/

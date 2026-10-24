@@ -236,13 +236,16 @@ def run_training_pipeline(config_path: str):
     # Export Baseline Reference Dataset (data/reference.parquet)
     raw_val_file = "data/raw/green_tripdata_2023-02.parquet"
     ref_parquet_path = config["data"]["reference_parquet_path"]
-    if os.path.exists(raw_val_file):
-        export_reference_dataset(
-            raw_val_path=raw_val_file,
-            output_path=ref_parquet_path,
-            champion_model=best_result["model"],
-            X_val=X_val,
-        )
+    if not os.path.exists(raw_val_file):
+        from src.utils import ensure_raw_dataset
+        ensure_raw_dataset(raw_val_file)
+
+    export_reference_dataset(
+        raw_val_path=raw_val_file,
+        output_path=ref_parquet_path,
+        champion_model=best_result["model"],
+        X_val=X_val,
+    )
 
     print("\nPhase 3 Model Training & Experiment Tracking successfully completed!")
 
