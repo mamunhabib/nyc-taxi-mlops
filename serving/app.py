@@ -80,6 +80,8 @@ def predict(ride: RideInput) -> PredictionOutput:
 
     try:
         features = [{
+            "PULocationID": str(ride.PULocationID),
+            "DOLocationID": str(ride.DOLocationID),
             "PU_DO": f"{ride.PULocationID}_{ride.DOLocationID}",
             "trip_distance": ride.trip_distance,
         }]

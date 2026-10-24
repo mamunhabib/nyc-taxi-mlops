@@ -26,8 +26,10 @@ def read_dataframe(filename: str) -> pd.DataFrame:
     # Compute trip duration in minutes
     df["duration"] = (df[dropoff_col] - df[pickup_col]).dt.total_seconds() / 60.0
 
-    # Filter out outliers (trips between 1 minute and 60 minutes)
+    # Filter out outliers (trips between 1 minute and 60 minutes, distance between 0 and 50 miles)
     df = df[(df.duration >= 1) & (df.duration <= 60)]
+    if "trip_distance" in df.columns:
+        df = df[(df.trip_distance > 0) & (df.trip_distance <= 50)]
 
     # Cast location IDs to string for categorical encoding
     categorical = ["PULocationID", "DOLocationID"]
@@ -39,7 +41,7 @@ def read_dataframe(filename: str) -> pd.DataFrame:
 def preprocess(df: pd.DataFrame, dv: DictVectorizer, fit_dv: bool = False):
     """Engineer route interaction feature and vectorize input matrix."""
     df["PU_DO"] = df["PULocationID"] + "_" + df["DOLocationID"]
-    categorical = ["PU_DO"]
+    categorical = ["PULocationID", "DOLocationID", "PU_DO"]
     numerical = ["trip_distance"]
 
     dicts = df[categorical + numerical].to_dict(orient="records")

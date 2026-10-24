@@ -2,9 +2,10 @@
 
 experiment:
   name: "nyc-taxi-experiment"
-  tracking_uri: "http://localhost:5000"
+  tracking_uri: "http://localhost:8087"
   model_registry_name: "nyc-taxi-duration-model"
   champion_alias: "champion"
+  preferred_model: "Ridge"
 
 data:
   processed_dir: "data/processed"

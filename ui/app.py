@@ -91,6 +91,51 @@ TAXI_ZONES = {
     "33": "Brooklyn Heights (Brooklyn)",
 }
 
+# Centroid coordinates (lat, lon) for NYC taxi zones to calculate realistic road distances
+ZONE_COORDS = {
+    "43": (40.7812, -73.9665),   # Central Park
+    "236": (40.7765, -73.9535),  # Upper East Side North
+    "237": (40.7705, -73.9590),  # Upper East Side South
+    "161": (40.7565, -73.9800),  # Midtown Center
+    "162": (40.7540, -73.9740),  # Midtown East
+    "230": (40.7580, -73.9855),  # Times Sq / Theatre District
+    "142": (40.7738, -73.9820),  # Lincoln Square East
+    "74": (40.7980, -73.9350),   # East Harlem North
+    "75": (40.7910, -73.9440),   # East Harlem South
+    "41": (40.8060, -73.9490),   # Central Harlem
+    "42": (40.8180, -73.9400),   # Central Harlem North
+    "166": (40.8100, -73.9620),  # Morningside Heights
+    "244": (40.8400, -73.9390),  # Washington Heights South
+    "132": (40.6413, -73.7781),  # JFK Airport
+    "138": (40.7769, -73.8740),  # LaGuardia Airport
+    "7": (40.7640, -73.9230),    # Astoria
+    "95": (40.7180, -73.8450),   # Forest Hills
+    "80": (40.7120, -73.9350),   # East Williamsburg
+    "255": (40.7190, -73.9570),  # Williamsburg North
+    "256": (40.7090, -73.9580),  # Williamsburg South
+    "61": (40.6720, -73.9430),   # Crown Heights North
+    "33": (40.6960, -73.9930),   # Brooklyn Heights
+}
+
+
+def estimate_distance(pu_id: str, do_id: str) -> float:
+    """Calculate realistic NYC road distance (miles) between taxi zones."""
+    if pu_id == do_id:
+        return 1.1
+    c1 = ZONE_COORDS.get(str(pu_id))
+    c2 = ZONE_COORDS.get(str(do_id))
+    if not c1 or not c2:
+        return 3.0
+    lat1, lon1 = c1
+    lat2, lon2 = c2
+    # Approximate Manhattan street grid / highway distance in miles
+    dlat = abs(lat1 - lat2) * 69.0
+    dlon = abs(lon1 - lon2) * 52.0
+    import math
+    euclid = math.hypot(dlat, dlon)
+    return round(max(0.5, euclid * 1.32), 1)
+
+
 # Resolve backend URL (defaults to localhost for local test, or internal cluster DNS in K8s)
 BACKEND_URL = os.getenv("SERVING_URL", "http://localhost:8085").rstrip("/")
 
@@ -110,7 +155,7 @@ def check_backend_health() -> tuple[bool, str]:
 # Header
 st.markdown('<div class="main-header">🚕 NYC Taxi Trip Duration Predictor</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="sub-header">Production Model Inference powered by FastAPI, XGBoost (@champion), and MLflow</div>',
+    '<div class="sub-header">Production Model Inference powered by FastAPI, MLflow Champion Registry, and Evidently AI</div>',
     unsafe_allow_html=True,
 )
 
@@ -137,19 +182,23 @@ with st.sidebar:
     if st.button("✈️ JFK Airport → Times Square"):
         st.session_state["pu_sel"] = "132"
         st.session_state["do_sel"] = "230"
-        st.session_state["dist_sel"] = 16.5
+        st.session_state["dist_val"] = 17.8
+        st.rerun()
     if st.button("🌳 Central Park → Midtown East"):
         st.session_state["pu_sel"] = "43"
         st.session_state["do_sel"] = "162"
-        st.session_state["dist_sel"] = 2.4
+        st.session_state["dist_val"] = 2.4
+        st.rerun()
     if st.button("🏙️ East Harlem → Williamsburg"):
         st.session_state["pu_sel"] = "74"
         st.session_state["do_sel"] = "255"
-        st.session_state["dist_sel"] = 7.8
+        st.session_state["dist_val"] = 7.4
+        st.rerun()
     if st.button("✈️ LaGuardia Airport → Upper East Side"):
         st.session_state["pu_sel"] = "138"
         st.session_state["do_sel"] = "236"
-        st.session_state["dist_sel"] = 8.2
+        st.session_state["dist_val"] = 5.5
+        st.rerun()
 
     st.divider()
     st.header("🔗 MLOps Platform Observability")
@@ -159,30 +208,41 @@ with st.sidebar:
     st.markdown("- [FastAPI Swagger Docs (8085)](http://localhost:8085/docs)")
 
 
-# Form Inputs
+# Form Inputs & Reactive State
 zone_keys = list(TAXI_ZONES.keys())
 
-default_pu = st.session_state.get("pu_sel", "43")
-default_do = st.session_state.get("do_sel", "161")
-default_dist = float(st.session_state.get("dist_sel", 2.5))
+if "pu_sel" not in st.session_state:
+    st.session_state["pu_sel"] = "43"
+if "do_sel" not in st.session_state:
+    st.session_state["do_sel"] = "161"
+if "dist_val" not in st.session_state:
+    st.session_state["dist_val"] = estimate_distance(st.session_state["pu_sel"], st.session_state["do_sel"])
+
+
+def on_route_change():
+    """Automatically recalculate estimated trip distance when pickup/dropoff zones change."""
+    pu = st.session_state.get("pu_sel", "43")
+    do = st.session_state.get("do_sel", "161")
+    st.session_state["dist_val"] = estimate_distance(pu, do)
+
 
 col_pu, col_do, col_dist = st.columns(3)
 
 with col_pu:
-    pu_index = zone_keys.index(default_pu) if default_pu in zone_keys else 0
     selected_pu = st.selectbox(
         "📍 Pick-up Location",
         options=zone_keys,
-        index=pu_index,
+        key="pu_sel",
+        on_change=on_route_change,
         format_func=lambda x: f"[{x}] {TAXI_ZONES.get(x, 'Zone ' + str(x))}",
     )
 
 with col_do:
-    do_index = zone_keys.index(default_do) if default_do in zone_keys else 0
     selected_do = st.selectbox(
         "🏁 Drop-off Location",
         options=zone_keys,
-        index=do_index,
+        key="do_sel",
+        on_change=on_route_change,
         format_func=lambda x: f"[{x}] {TAXI_ZONES.get(x, 'Zone ' + str(x))}",
     )
 
@@ -191,8 +251,9 @@ with col_dist:
         "🛣️ Trip Distance (miles)",
         min_value=0.1,
         max_value=35.0,
-        value=default_dist,
         step=0.1,
+        key="dist_val",
+        help="Automatically calculated for the chosen route. You can also adjust manually.",
     )
 
 st.write("")
@@ -205,7 +266,7 @@ if predict_clicked:
         "trip_distance": float(trip_distance),
     }
 
-    with st.spinner("Querying Champion XGBoost inference service..."):
+    with st.spinner("Querying Champion inference service..."):
         start_time = time.time()
         try:
             resp = requests.post(f"{BACKEND_URL}/predict", json=payload, timeout=5)

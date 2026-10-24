@@ -109,6 +109,8 @@ def export_reference_dataset(
 
     df_raw["duration"] = (df_raw[dropoff_col] - df_raw[pickup_col]).dt.total_seconds() / 60.0
     df_clean = df_raw[(df_raw.duration >= 1) & (df_raw.duration <= 60)].copy()
+    if "trip_distance" in df_clean.columns:
+        df_clean = df_clean[(df_clean.trip_distance > 0) & (df_clean.trip_distance <= 50)].copy()
 
     df_clean["PULocationID"] = df_clean["PULocationID"].astype(str)
     df_clean["DOLocationID"] = df_clean["DOLocationID"].astype(str)
@@ -198,8 +200,10 @@ def run_training_pipeline(config_path: str):
             print(f"XGBoost Complete | Val RMSE: {rmse:.4f} | Val MAE: {mae:.4f} | Time: {dur:.2f}s")
             results.append({"name": "XGBoost", "model": model, "rmse": rmse, "mae": mae, "run_id": run.info.run_id})
 
-    # Select Champion (Lowest RMSE)
-    best_result = min(results, key=lambda x: x["rmse"])
+    # Select Champion: Preferred model (Ridge per Zoomcamp lin_reg) or lowest RMSE
+    preferred_name = config["experiment"].get("preferred_model")
+    matched = [r for r in results if preferred_name and r["name"].lower() == preferred_name.lower()]
+    best_result = matched[0] if matched else min(results, key=lambda x: x["rmse"])
     print("\n" + "=" * 60)
     print("EXPERIMENT SCOREBOARD")
     print("=" * 60)
