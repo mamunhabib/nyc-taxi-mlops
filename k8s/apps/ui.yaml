@@ -27,6 +27,8 @@ spec:
           env:
             - name: SERVING_URL
               value: "http://nyc-taxi-serving:8000"
+            - name: TZ
+              value: "Asia/Kuala_Lumpur"
           livenessProbe:
             httpGet:
               path: /_stcore/health

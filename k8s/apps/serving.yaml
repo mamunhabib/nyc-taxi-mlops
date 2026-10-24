@@ -32,6 +32,8 @@ spec:
               value: "nyc-taxi-duration-model"
             - name: MODEL_ALIAS
               value: "champion"
+            - name: TZ
+              value: "Asia/Kuala_Lumpur"
           livenessProbe:
             httpGet:
               path: /health

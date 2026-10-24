@@ -14,3 +14,4 @@ data:
   MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
   S3_BUCKET: "nyc-taxi-mlops"
   MLFLOW_TRACKING_URI: "http://mlflow-server:8087"
+  TZ: "Asia/Kuala_Lumpur"
