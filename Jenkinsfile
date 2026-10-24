@@ -28,7 +28,7 @@ pipeline {
                 sh "docker build -t ${RUNNER_IMAGE} -f Dockerfile.runner ."
 
                 echo "Running Unit and Integration tests..."
-                sh "docker run --rm -v \$(pwd):/app -w /app ${RUNNER_IMAGE} pytest tests/test_data_prep.py -v"
+                sh "docker run --rm ${RUNNER_IMAGE} pytest tests/test_data_prep.py -v"
             }
         }
 
@@ -36,8 +36,8 @@ pipeline {
             steps {
                 echo "Evaluating production data drift and triggering automated retraining if needed..."
                 sh """
-                docker run --rm --network host \
-                    -v \$(pwd):/app -w /app \
+                docker rm -f nyc-taxi-ct-run || true
+                docker run --name nyc-taxi-ct-run --network host \
                     -e MLFLOW_TRACKING_URI=http://localhost:8087 \
                     -e MLFLOW_S3_ENDPOINT_URL=http://localhost:9000 \
                     -e AWS_ACCESS_KEY_ID=minioadmin \
@@ -52,6 +52,10 @@ pipeline {
                             python pipelines/training_flow.py
                         fi
                     '
+                docker cp nyc-taxi-ct-run:/app/models/model.pkl ./models/model.pkl || true
+                docker cp nyc-taxi-ct-run:/app/data/processed/val.pkl ./data/processed/val.pkl || true
+                docker cp nyc-taxi-ct-run:/app/data/reference.parquet ./data/reference.parquet || true
+                docker rm -f nyc-taxi-ct-run || true
                 """
             }
         }
