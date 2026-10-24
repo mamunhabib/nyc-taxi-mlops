@@ -165,12 +165,12 @@ col_status1, col_status2 = st.columns([3, 1])
 with col_status1:
     if is_healthy:
         st.markdown(
-            f'Status: <span class="badge-live">● CONNECTED</span> &nbsp; Model: <b>{model_tag}</b> &nbsp; Endpoint: <code>{BACKEND_URL}</code>',
+            f'Status: <span class="badge-live">● CONNECTED</span> &nbsp; Model: <b>{model_tag}</b>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            f'Status: <span class="badge-offline">● BACKEND OFFLINE</span> &nbsp; Target: <code>{BACKEND_URL}</code> (FastAPI must be running)',
+            'Status: <span class="badge-offline">● BACKEND OFFLINE</span> &nbsp; (FastAPI serving must be running)',
             unsafe_allow_html=True,
         )
 
