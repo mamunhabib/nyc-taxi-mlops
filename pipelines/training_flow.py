@@ -23,7 +23,7 @@ from mlflow.tracking import MlflowClient
 
 from monitoring.drift_detector import run_drift_detection
 from monitoring.db import MetricsDB
-from src.data_prep import read_dataframe, preprocess
+from src.data_prep import read_dataframe, preprocess, dump_pickle
 from src.train import run_training_pipeline
 
 
@@ -65,8 +65,18 @@ def execute_continuous_training(
     df_val = read_dataframe(val_raw)
     df_stream = read_dataframe(stream_raw)
     df_retrain_val = pd.concat([df_val, df_stream], ignore_index=True)
-
     print(f"[CT Pipeline] Combined Retraining Set: {len(df_retrain_val):,} rows")
+
+    # Vectorize and update data/processed/val.pkl with the fresh batch
+    dv_path = "data/processed/dv.pkl"
+    with open(dv_path, "rb") as f_in:
+        dv = pickle.load(f_in)
+
+    X_val, _ = preprocess(df_retrain_val, dv, fit_dv=False)
+    y_val = df_retrain_val["duration"].values
+    val_processed_path = "data/processed/val.pkl"
+    dump_pickle((X_val, y_val), val_processed_path)
+    print(f"[CT Pipeline] Saved updated validation split to '{val_processed_path}' (Shape: {X_val.shape})")
 
     # 2. Trigger Unified Model Training with MLflow tracking
     print("\n[CT Pipeline] Step 3: Retraining Candidate Models (Ridge, RF, XGBoost)...")
@@ -74,7 +84,9 @@ def execute_continuous_training(
 
     # 3. Update Baseline Reference Dataset for future monitoring
     print("\n[CT Pipeline] Step 4: Updating Golden Baseline Reference Dataset...")
-    client = MlflowClient()
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:8087")
+    mlflow.set_tracking_uri(tracking_uri)
+    client = MlflowClient(tracking_uri=tracking_uri)
     registry_name = "nyc-taxi-duration-model"
     alias = "champion"
 
