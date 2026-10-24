@@ -207,7 +207,7 @@ with st.sidebar:
     st.markdown("- [MLflow Model Registry (8087)](http://localhost:8087)")
     st.markdown("- [MinIO Object Storage (8088)](http://localhost:8088)")
     st.markdown("- [FastAPI Swagger Docs (8085)](http://localhost:8085/docs)")
-
+    st.markdown("- [Jenkins (8081)](http://localhost:8081")
 
 # Form Inputs & Reactive State
 zone_keys = list(TAXI_ZONES.keys())
