@@ -72,6 +72,16 @@ def execute_continuous_training(
     with open(dv_path, "rb") as f_in:
         dv = pickle.load(f_in)
 
+    # Ensure base training split exists
+    train_processed_path = "data/processed/train.pkl"
+    if not os.path.exists(train_processed_path):
+        print(f"[CT Pipeline] Generating base training split '{train_processed_path}'...")
+        df_train = read_dataframe(train_raw)
+        X_train, _ = preprocess(df_train, dv, fit_dv=False)
+        y_train = df_train["duration"].values
+        dump_pickle((X_train, y_train), train_processed_path)
+        print(f"[CT Pipeline] Saved base training split to '{train_processed_path}' (Shape: {X_train.shape})")
+
     X_val, _ = preprocess(df_retrain_val, dv, fit_dv=False)
     y_val = df_retrain_val["duration"].values
     val_processed_path = "data/processed/val.pkl"
