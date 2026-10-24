@@ -116,8 +116,12 @@ def export_reference_dataset(
     df_clean["DOLocationID"] = df_clean["DOLocationID"].astype(str)
     df_clean["PU_DO"] = df_clean["PULocationID"] + "_" + df_clean["DOLocationID"]
 
-    # Generate Champion predictions
-    df_clean["prediction"] = champion_model.predict(X_val)
+    # Generate Champion predictions using matching feature matrix
+    with open("data/processed/dv.pkl", "rb") as f_dv:
+        dv = pickle.load(f_dv)
+    ref_dicts = df_clean[["PULocationID", "DOLocationID", "PU_DO", "trip_distance"]].to_dict(orient="records")
+    X_ref = dv.transform(ref_dicts)
+    df_clean["prediction"] = champion_model.predict(X_ref)
 
     # Keep key monitoring columns
     cols_to_keep = [
