@@ -43,7 +43,7 @@ def prepare_current_dataset(
     with open(model_path, "rb") as f_in:
         model = pickle.load(f_in)
 
-    dicts = df[["PU_DO", "trip_distance"]].to_dict(orient="records")
+    dicts = df[["PULocationID", "DOLocationID", "PU_DO", "trip_distance"]].to_dict(orient="records")
     X = dv.transform(dicts)
     df["prediction"] = model.predict(X)
 
@@ -62,8 +62,9 @@ def setup_project_and_dashboard(ws: RemoteWorkspace, project_name: str):
 
     try:
         current_panels = project.dashboard.model().panels
-        if not current_panels:
-            project.dashboard.add_panel(text_panel(title="NYC Taxi Trip Duration Drift Monitoring"))
+        if len(current_panels) < 5:
+            project.dashboard.clear_dashboard()
+            project.dashboard.add_panel(text_panel(title="NYC Taxi Trip Duration — Model & Data Drift Monitoring Dashboard"))
             project.dashboard.add_panel(
                 counter_panel(
                     title="Share of Drifted Features",
@@ -93,8 +94,36 @@ def setup_project_and_dashboard(ws: RemoteWorkspace, project_name: str):
                 )
             )
             project.dashboard.add_panel(
+                counter_panel(
+                    title="Production Batch Row Count",
+                    size="half",
+                    values=[
+                        PanelMetric(
+                            legend="Current Rows",
+                            metric="evidently:metric_v2:RowCount",
+                            metric_labels={"dataset": "current"},
+                        ),
+                    ],
+                    aggregation="last",
+                )
+            )
+            project.dashboard.add_panel(
+                counter_panel(
+                    title="Mean Predicted Duration (mins)",
+                    size="half",
+                    values=[
+                        PanelMetric(
+                            legend="Prediction Mean",
+                            metric="evidently:metric_v2:MeanValue",
+                            metric_labels={"column": "prediction", "dataset": "current"},
+                        ),
+                    ],
+                    aggregation="last",
+                )
+            )
+            project.dashboard.add_panel(
                 line_plot_panel(
-                    title="Data Drift Over Time (Share of Drifted Features)",
+                    title="Data Drift Trend Over Time (Share of Drifted Features)",
                     values=[
                         PanelMetric(
                             legend="Share of Drifted Features",
@@ -105,7 +134,6 @@ def setup_project_and_dashboard(ws: RemoteWorkspace, project_name: str):
                     size="full",
                 )
             )
-            ws.save_dashboard(project.id, project.dashboard.model())
     except Exception as e:
         print(f"[DriftDetector] Dashboard panels check: {e}")
 

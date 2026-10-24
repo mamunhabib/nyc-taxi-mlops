@@ -17,6 +17,8 @@ def load_raw_stream_data(filepath: str = "data/raw/green_tripdata_2023-03.parque
 
     df["duration"] = (df[dropoff_col] - df[pickup_col]).dt.total_seconds() / 60.0
     df = df[(df.duration >= 1) & (df.duration <= 60)].copy()
+    if "trip_distance" in df.columns:
+        df = df[(df.trip_distance > 0) & (df.trip_distance <= 50)].copy()
 
     df["PULocationID"] = df["PULocationID"].astype(str)
     df["DOLocationID"] = df["DOLocationID"].astype(str)
